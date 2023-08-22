@@ -1,0 +1,35 @@
+{:deps
+ {
+  cljsjs/js-joda-timezone {:mvn/version "2.2.0-0"}
+  com.fooheads/stdlib {:mvn/version "0.3.2"}
+  henryw374/js-joda {:mvn/version "3.2.0-0"}
+  henryw374/js-joda-locale-en-us {:mvn/version "1.0.0-1"}
+  org.clojure/clojurescript {:mvn/version "1.11.54"}}
+
+ :aliases
+ {:dev
+  {:extra-paths ["test"]
+   :extra-deps
+   {pjstadig/humane-test-output   {:mvn/version "0.11.0"}
+    tick/tick                     {:mvn/version "0.5.0"}}}
+
+  :test
+  {:extra-paths ["test"]
+   :extra-deps {io.github.cognitect-labs/test-runner
+                {:git/tag "v0.5.1" :git/sha "dfb30dd"}
+                tick/tick {:mvn/version "0.5.0"}}
+   :main-opts ["-m" "cognitect.test-runner"]
+   :exec-fn cognitect.test-runner.api/test}
+
+  :test/cljs
+  {:extra-paths ["test"]
+   :extra-deps
+   {org.clojure/clojurescript   {:mvn/version "1.11.54"}
+    olical/cljs-test-runner     {:mvn/version "3.8.0"}
+    tick/tick                   {:mvn/version "0.5.0"}}
+   :main-opts ["-m" "cljs-test-runner.main"]}
+
+  :build
+  {:deps {com.fooheads/build-clj {:mvn/version "1.0.0"}}
+   :ns-default fooheads.build}}}
+
