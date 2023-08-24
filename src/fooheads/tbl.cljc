@@ -4,6 +4,7 @@
   (:refer-clojure :exclude [cat])
   (:require
     [fooheads.stdlib :refer [cljs-env?
+                             index-of
                              named?
                              partition-indexes
                              partition-using
@@ -194,8 +195,8 @@
    (interpret {} table))
 
   ([opts table]
-   (let [default-opts {:col-header-idxs [0]
-                       :row-header-idxs []
+   (let [default-opts {:col-header-idxs :auto
+                       :row-header-idxs :auto
                        :coercion-idx nil}
 
          opts (merge default-opts opts)
@@ -205,6 +206,17 @@
          coercion-idx (:coercion-idx opts)
 
          coercion-row? (fn [row] (some var? row))
+
+         col-header-idxs (if (= :auto col-header-idxs)
+                           (range (or (index-of divider-line? table) 1))
+                           col-header-idxs)
+
+         row-header-idxs (if (= :auto row-header-idxs)
+                           (let [row (first table)]
+                             (if (divider-line? row)
+                               []
+                               (range (or (count (take-while nil? (first table))) 0))))
+                           row-header-idxs)
 
          find-coercion-idx
          (fn [table]

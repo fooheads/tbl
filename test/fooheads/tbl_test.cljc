@@ -428,16 +428,38 @@
 
 
   (testing "cells"
-    (tbl
-      |      |     | A       | B       |
-      |      |     | Mon     | Mon     |
-      |      |     | 100     | 50      |
-      | ---- | --- | ------- | ------- |
-      | a    | 1   | x       | y       |
-      | b    | 2   | x       |         |
-      {:col-header-idxs [0 1 2]
-       :row-header-idxs [0 1]
-       :format :cells}))
+    (testing "specific"
+      (is (= '[{:col-header [A Mon 100] :row-header [a 1] :value x}
+               {:col-header [B Mon 50] :row-header [a 1] :value y}
+               {:col-header [A Mon 100] :row-header [b 2] :value x}
+               {:col-header [B Mon 50] :row-header [b 2] :value nil}]
+
+            (tbl
+              |      |     | A       | B       |
+              |      |     | Mon     | Mon     |
+              |      |     | 100     | 50      |
+              | ---- | --- | ------- | ------- |
+              | a    | 1   | x       | y       |
+              | b    | 2   | x       |         |
+              {:col-header-idxs [0 1 2]
+               :row-header-idxs [0 1]
+               :format :cells}))))
+
+
+    (testing "auto col-header-idxs"
+      (is (= '[{:col-header [A Mon 100] :row-header [a 1] :value x}
+               {:col-header [B Mon 50] :row-header [a 1] :value y}
+               {:col-header [A Mon 100] :row-header [b 2] :value x}
+               {:col-header [B Mon 50] :row-header [b 2] :value nil}]
+
+            (tbl
+              |      |     | A       | B       |
+              |      |     | Mon     | Mon     |
+              |      |     | 100     | 50      |
+              | ---- | --- | ------- | ------- |
+              | a    | 1   | x       | y       |
+              | b    | 2   | x       |         |
+              {:format :cells})))))
 
 
   #_(testing "second line can contain coercions"

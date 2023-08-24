@@ -1,7 +1,7 @@
 {:deps
  {
   cljsjs/js-joda-timezone {:mvn/version "2.2.0-0"}
-  com.fooheads/stdlib {:mvn/version "0.3.2"}
+  com.fooheads/stdlib {:mvn/version "0.3.3"}
   henryw374/js-joda {:mvn/version "3.2.0-0"}
   henryw374/js-joda-locale-en-us {:mvn/version "1.0.0-1"}
   org.clojure/clojurescript {:mvn/version "1.11.54"}}
