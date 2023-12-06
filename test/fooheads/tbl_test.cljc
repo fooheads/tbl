@@ -434,16 +434,16 @@
                {:col-header [A Mon 100] :row-header [b 2] :value x}
                {:col-header [B Mon 50] :row-header [b 2] :value nil}]
 
-            (tbl
-              |      |     | A       | B       |
-              |      |     | Mon     | Mon     |
-              |      |     | 100     | 50      |
-              | ---- | --- | ------- | ------- |
-              | a    | 1   | x       | y       |
-              | b    | 2   | x       |         |
-              {:col-header-idxs [0 1 2]
-               :row-header-idxs [0 1]
-               :format :cells}))))
+             (tbl
+               |      |     | A       | B       |
+               |      |     | Mon     | Mon     |
+               |      |     | 100     | 50      |
+               | ---- | --- | ------- | ------- |
+               | a    | 1   | x       | y       |
+               | b    | 2   | x       |         |
+               {:col-header-idxs [0 1 2]
+                :row-header-idxs [0 1]
+                :format :cells}))))
 
 
     (testing "auto col-header-idxs"
@@ -452,14 +452,29 @@
                {:col-header [A Mon 100] :row-header [b 2] :value x}
                {:col-header [B Mon 50] :row-header [b 2] :value nil}]
 
-            (tbl
-              |      |     | A       | B       |
-              |      |     | Mon     | Mon     |
-              |      |     | 100     | 50      |
-              | ---- | --- | ------- | ------- |
-              | a    | 1   | x       | y       |
-              | b    | 2   | x       |         |
-              {:format :cells})))))
+             (tbl
+               |      |     | A       | B       |
+               |      |     | Mon     | Mon     |
+               |      |     | 100     | 50      |
+               | ---- | --- | ------- | ------- |
+               | a    | 1   | x       | y       |
+               | b    | 2   | x       |         |
+               {:format :cells})))))
+
+
+  (testing "two dashes in keyword"
+    (is (= [{:attr/name :user/id}
+            {:attr/name :user/first-name}
+            {:attr/name :user/last-name}
+            {:attr/name :user/full--name}]
+
+           (tbl
+             | :attr/name       |
+             | -------          |
+             | :user/id         |
+             | :user/first-name |
+             | :user/last-name  |
+             | :user/full--name |))))
 
 
   #_(testing "second line can contain coercions"

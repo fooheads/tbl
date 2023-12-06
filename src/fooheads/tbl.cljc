@@ -18,10 +18,15 @@
 
 (def nil-value? (comp nil? val))
 (def divider-line '---)
-(defn- divider-line? [x] (= x divider-line))
 
 
-(defn- replace-empty-with-val [separator v es]
+(defn- divider-line?
+  [x]
+  (= x divider-line))
+
+
+(defn- replace-empty-with-val
+  [separator v es]
   (reduce
     (fn [sum b]
       (let [a (last sum)]
@@ -32,11 +37,13 @@
     es))
 
 
-(defn- blank-line? [row]
+(defn- blank-line?
+  [row]
   (every? nil? row))
 
 
-(defn- coerce [col-header data coercions]
+(defn- coerce
+  [col-header data coercions]
   (reduce
     (fn [data [k index]]
       (if-let [f (get coercions k)]
@@ -46,13 +53,15 @@
     (zipmap col-header (range))))
 
 
-(defn- token [token]
+(defn- token
+  [token]
   (if (symbol? token)
     `(quote ~token)
     token))
 
 
-(defn- resolve-symbol [env _sym]
+(defn- resolve-symbol
+  [env _sym]
   (if (cljs-env? env)
     #?(:cljs nil
        :clj (throw (ex-info "resolve is not supported in cljs" {})))
@@ -60,7 +69,8 @@
        :clj (resolve _sym))))
 
 
-(defn -token-or-resolve [env token]
+(defn -token-or-resolve
+  [env token]
   (if (symbol? token)
     (or (some->> token (resolve-symbol env))  `(quote ~token))
     token))
@@ -135,7 +145,7 @@
   and :divider. :separator is the token between columns and :divider is the
   column value in the divider row.
 
-  Default opts are: `{:separator '| :divider #\"-{2,}\"}`
+  Default opts are: `{:separator '| :divider #\"-{3,}\"}`
 
   Takes as arguments either a seq of tokens and an opts map, or a map
   with :tokens and :opts (which is the output of `tokenize`)."
@@ -144,7 +154,7 @@
    (tabularize {} tokens))
 
   ([opts tokens]
-   (let [default-opts  {:separator '| :divider #"-{2,}"}
+   (let [default-opts  {:separator '| :divider #"-{3,}"}
          {:keys [divider separator]} (merge default-opts opts)
 
          separator?        #(= separator %)
@@ -276,10 +286,24 @@
        {:data (vec data)}))))
 
 
-(defn col-headers [interpretation]     (:col-headers interpretation))
-(defn row-headers [interpretation]     (:row-headers interpretation))
-(defn data [interpretation]            (:data interpretation))
-(defn transformations [interpretation] (:transformations interpretation))
+(defn col-headers
+  [interpretation]
+  (:col-headers interpretation))
+
+
+(defn row-headers
+  [interpretation]
+  (:row-headers interpretation))
+
+
+(defn data
+  [interpretation]
+  (:data interpretation))
+
+
+(defn transformations
+  [interpretation]
+  (:transformations interpretation))
 
 
 (defn transform
