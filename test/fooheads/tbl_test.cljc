@@ -2,7 +2,9 @@
   {:clj-kondo/config '{:linters {:unresolved-symbol {:level :off}}}}
   (:require
     [clojure.test :refer [deftest is testing]]
-    [fooheads.tbl :as tbl :refer [interpret tabularize tbl tokenize transform] :include-macros true]
+    [fooheads.tbl :as tbl
+     :refer [apply-template interpret tabularize tbl tokenize transform]
+     :include-macros true]
     [tick.core :as t]))
 
 
@@ -499,4 +501,51 @@
                | "2021-07-02" | 20      | 200     |
                {:resolve true
                 :coercions {:value double}})))))
+
+
+(deftest apply-template-test
+  (let [template
+        (tbl
+          {:format :table}
+          | ---                    | ---                  |
+          | Customer               | :order/customer      |
+          | Date                   | :order/date          |
+          |                        |                      |
+          | Article                | Quantity             |
+          | *                      | *                    |
+          | :order-line/article-id | :order-line/quantity |)
+
+        order-data
+        (tbl
+          {:format :table}
+          | ---      | ---          | ---      |
+          | Customer | "John Doe"   |          |
+          | Date     | "2024-08-25" |          |
+          |          |              |          |
+          | Article  | Desc         | Quantity |
+          | 103      | "Bread"      | 1        |
+          | 234      | "Milk 1L"    | 4        |
+          | 666      | "BBQ Sauce"  | 1        |)]
+
+    (is
+      (=
+       [{}
+        {:order/customer "John Doe"}
+        {:order/date "2024-08-25"}
+        {}
+        {}
+        [{:order-line/article-id 103 :order-line/quantity "Bread"}]
+        [{:order-line/article-id 234 :order-line/quantity "Milk 1L"}]
+        [{:order-line/article-id 666 :order-line/quantity "BBQ Sauce"}]]
+
+       (apply-template template order-data)))))
+
+
+
+
+
+
+
+
+
 

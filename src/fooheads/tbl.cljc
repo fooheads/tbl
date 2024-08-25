@@ -392,3 +392,91 @@
        (interpret opts#)
        (transform opts#))))
 
+
+
+(defn- repeat-row? [row] (= '* (first row)))
+
+
+(defn apply-template
+  "Apply a template to (:table) data with the same shape and extract the data
+  matching the keywords in the template. A template can represent a map and a
+  collection of maps in one template.
+
+  A template that looks like this:
+
+  `[()
+    [Customer :order/customer]
+    [Date :order/date]
+    [nil nil]
+    [Article Quantity]
+    [* *]
+    [:order-line/article-id :order-line/quantity]]`
+
+  appled to this data:
+
+  `[()
+    [Customer \"John Doe\" nil]
+    [Date \"2024-08-25\" nil]
+    [nil nil nil]
+    [Article Desc Quantity]
+    [103 \"Bread\" 1]
+    [234 \"Milk 1L\" 4
+    [666 \"BBQ Sauce\" 1]]
+
+  will result in a this data structure:
+
+  `[{}
+    {:order/customer \"John Doe\"}
+    {:order/date \"2024-08-25\"}
+    {}
+    {}
+    [{:order-line/article-id 103 :order-line/quantity \"Bread\"}]
+    [{:order-line/article-id 234 :order-line/quantity \"Milk 1L\"}]
+    [{:order-line/article-id 666 :order-line/quantity \"BBQ Sauce\"}]]
+
+  where each line in the collection part is wrapped in a vector in order
+  to differentiate the top level values from the collection entries in further
+  post processing into domain data.
+
+  Note that both the data and the templates can easily be created by using
+  the `tbl` macro with the option `{:format :table}`. Example:
+
+  `(tbl
+    {:format :table}
+    | ---                    | ---                  |
+    | Customer               | :order/customer      |
+    | Date                   | :order/date          |
+    |                        |                      |
+    | Article                | Quantity             |
+    | *                      | *                    |
+    | :order-line/article-id | :order-line/quantity |)`
+  "
+
+  [template data]
+  (loop
+    [template-index 0
+     data-index 0
+     coll-mode false
+     result []]
+
+    (let [template-row (get template template-index)
+          data-row (get data data-index)]
+
+      (if (< data-index (count data))
+        (cond
+          (repeat-row? template-row)
+          (recur (inc template-index) data-index true result)
+
+          :else
+          (let [row
+                (->>
+                  (map vector template-row data-row)
+                  (mapcat (fn [[k v]] (when (keyword? k) [k v])))
+                  (apply hash-map))]
+
+            (recur
+              (if coll-mode template-index (inc template-index))
+              (inc data-index)
+              coll-mode
+              (conj result (if coll-mode [row] row)))))
+        result))))
