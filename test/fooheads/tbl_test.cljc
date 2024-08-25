@@ -1,9 +1,11 @@
 (ns fooheads.tbl-test
   {:clj-kondo/config '{:linters {:unresolved-symbol {:level :off}}}}
   (:require
+    [clojure.string :as str]
     [clojure.test :refer [deftest is testing]]
     [fooheads.tbl :as tbl
-     :refer [apply-template interpret tabularize tbl tokenize transform]
+     :refer [apply-template interpret relation->tbl
+             tabularize tbl tokenize transform]
      :include-macros true]
     [tick.core :as t]))
 
@@ -541,11 +543,16 @@
        (apply-template template order-data)))))
 
 
-
-
-
-
-
-
-
+(deftest relation->tbl-test
+  (is
+    (=
+      (str/join
+        "\n"
+        ["(tbl"
+         "  | :date | :value |"
+         "  | --- | --- |"
+         "  | 2021-07-02 | 20 |"
+         "  | 2021-07-01 | 10 |)"])
+      (relation->tbl
+       #{{:date "2021-07-01" :value 10} {:date "2021-07-02" :value 20}}))))
 
