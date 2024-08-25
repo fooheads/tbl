@@ -3,7 +3,9 @@
   and the rest represent the rows"
   (:refer-clojure :exclude [cat])
   (:require
+    [clojure.string :as str]
     [fooheads.stdlib :refer [cljs-env?
+                             const
                              index-of
                              named?
                              partition-indexes
@@ -478,3 +480,23 @@
               coll-mode
               (conj result (if coll-mode [row] row)))))
         result))))
+
+
+(defn relation->tbl
+  "Returns a string that represents the code that created the relation.
+  Typically used as a helper function to generate data to be used in tests."
+  [relation]
+  (let [header (keys (first relation))
+        separator (map (constantly '---) header)
+        data (map (apply juxt header) relation)
+
+        s
+        (->>
+          data
+          (cons separator)
+          (cons header)
+          ;(map interleave-f)
+          (map #(str "  | " (str/join " | " %) " |"))
+          (str/join "\n"))]
+    (str "(tbl\n" s ")")))
+
