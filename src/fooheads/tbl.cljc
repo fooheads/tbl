@@ -496,7 +496,7 @@
           (cons separator)
           (cons header)
           ;(map interleave-f)
-          (map #(str "  | " (str/join " | " %) " |"))
+          (map #(str "  | " (str/join " | " (map pr-str %)) " |"))
           (str/join "\n"))]
     (str "(tbl\n" s ")")))
 
