@@ -546,13 +546,13 @@
 (deftest relation->tbl-test
   (is
     (=
-      (str/join
-        "\n"
-        ["(tbl"
-         "  | :date | :value |"
-         "  | --- | --- |"
-         "  | 2021-07-02 | 20 |"
-         "  | 2021-07-01 | 10 |)"])
-      (relation->tbl
-       #{{:date "2021-07-01" :value 10} {:date "2021-07-02" :value 20}}))))
+     (str/join
+       "\n"
+       ["(tbl"
+        "  | :name | :date | :value |"
+        "  | --- | --- | --- |"
+        "  | \"Jimi\" | \"2021-07-01\" | 10 |"
+        "  | \"Eddie\" | \"2021-07-02\" | 20 |)"])
+     (relation->tbl
+      [{:name "Jimi" :date "2021-07-01" :value 10} {:name "Eddie" :date "2021-07-02" :value 20}]))))
 
