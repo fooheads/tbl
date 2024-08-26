@@ -484,21 +484,40 @@
         result))))
 
 
+(defn make-comparator [order]
+  (let [n (count order)
+        order-map
+        (if (vector? order)
+          (->>
+            order
+            (map-indexed (fn [index x] [x index]))
+            (into {}))
+          order)]
+
+    (fn [x y]
+      (compare (get order-map x n) (get order-map y n)))))
+
+
 (defn relation->tbl
   "Returns a string that represents the code that created the relation.
-  Typically used as a helper function to generate data to be used in tests."
-  [relation]
-  (let [header (keys (first relation))
-        separator (map (constantly '---) header)
-        data (map (apply juxt header) relation)
+  Typically used as a helper function to generate data to be used in tests.
 
-        s
-        (->>
-          data
-          (cons separator)
-          (cons header)
-          ;(map interleave-f)
-          (map #(str "  | " (str/join " | " (map pr-str %)) " |"))
-          (str/join "\n"))]
-    (str "(tbl\n" s ")")))
+  `key-order` can be either a vector of keys in the order they should appear,
+  or a map from key to position (int), or a comparator function."
+  ([relation]
+   (relation->tbl nil relation))
+  ([key-order relation]
+   (let [cmp-f (make-comparator key-order)
+         header (sort cmp-f (keys (first relation)))
+         separator (map (constantly '---) header)
+         data (map (apply juxt header) relation)
+
+         s
+         (->>
+           data
+           (cons separator)
+           (cons header)
+           (map #(str "  | " (str/join " | " (map pr-str %)) " |"))
+           (str/join "\n"))]
+     (str "(tbl\n" s ")"))))
 

@@ -544,15 +544,31 @@
 
 
 (deftest relation->tbl-test
-  (is
-    (=
-     (str/join
-       "\n"
-       ["(tbl"
-        "  | :name | :date | :value |"
-        "  | --- | --- | --- |"
-        "  | \"Jimi\" | \"2021-07-01\" | 10 |"
-        "  | \"Eddie\" | \"2021-07-02\" | 20 |)"])
-     (relation->tbl
-      [{:name "Jimi" :date "2021-07-01" :value 10} {:name "Eddie" :date "2021-07-02" :value 20}]))))
+  (testing "default"
+    (is
+      (=
+       (str/join
+         "\n"
+         ["(tbl"
+          "  | :name | :date | :value |"
+          "  | --- | --- | --- |"
+          "  | \"Jimi\" | \"2021-07-01\" | 10 |"
+          "  | \"Eddie\" | \"2021-07-02\" | 20 |)"])
+       (relation->tbl
+        [{:name "Jimi" :date "2021-07-01" :value 10} {:name "Eddie" :date "2021-07-02" :value 20}]))))
+
+  (testing "with key sort order"
+    (is
+      (=
+       (str/join
+         "\n"
+         ["(tbl"
+          "  | :date | :name | :value |"
+          "  | --- | --- | --- |"
+          "  | \"2021-07-01\" | \"Jimi\" | 10 |"
+          "  | \"2021-07-02\" | \"Eddie\" | 20 |)"])
+
+       (relation->tbl
+         [:date :name :value]
+         [{:name "Jimi" :date "2021-07-01" :value 10} {:name "Eddie" :date "2021-07-02" :value 20}])))))
 
