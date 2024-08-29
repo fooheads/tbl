@@ -25,18 +25,6 @@
   (= x divider-line))
 
 
-(defn- replace-empty-with-val
-  [separator v es]
-  (reduce
-    (fn [sum b]
-      (let [a (last sum)]
-        (if (and (= separator a) (= separator b))
-          (-> sum (conj v) (conj b))
-          (-> sum (conj b)))))
-    []
-    es))
-
-
 (defn- blank-line?
   [row]
   (every? nil? row))
@@ -136,6 +124,18 @@
     {:data data}))
 
 
+(defn- extract-cells [separator-f row]
+  (->>
+    row
+    (partition-using #(separator-f (last %)))
+    (rest)
+    (mapv (comp vec butlast))
+    (mapv #(cond
+             (= 0 (count %)) nil
+             (= 1 (count %)) (first %)
+             :else %))))
+
+
 (defn tabularize
   "Interprets tokens into a 'table', a vector of vectors, using either the option
   :width to determine the number of columns per row, or if :width is not present,
@@ -160,8 +160,6 @@
          separator?        #(= separator %)
          divider?          #(and divider (named? %) (re-find divider (name %)))
          divider-line?     #(every? divider? %)
-         introduce-nils    (partial replace-empty-with-val separator nil)
-         remove-separator  #(remove separator? %)
          make-divider-line #(if (divider-line? %) divider-line %)
          calculated-width  (->> tokens (map #(if (divider? %) 1 0)) (apply +))
          width             (or (:width opts) calculated-width)
@@ -174,7 +172,7 @@
          (->>
            tokens
            (make-rows)
-           (map (comp vec remove-separator introduce-nils))
+           (map (partial extract-cells separator?))
            (mapv make-divider-line))]
 
 

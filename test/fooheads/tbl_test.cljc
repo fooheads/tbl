@@ -85,7 +85,23 @@
                | =====        | =====   | =====   |
                | "2021-07-01" | 10      | 100     |
                | "2021-07-02" | 20      |         |)
-             (tabularize {:divider #"={2,}"}))))))
+             (tabularize {:divider #"={2,}"})))))
+
+
+  (testing "multiple values in cell should become a vector"
+    (is (= '[[:simple :collections]
+             ---
+             [10 [1 2 3]]
+             [ X [A B C]]]
+           (->>
+             (tokenize
+               {}
+               | :simple | :collections |
+               | ---     | -------      |
+               | 10      | 1 2 3        |
+               | X       | A B C        |)
+             (tabularize))))))
+
 
 
 (deftest interpret-test
