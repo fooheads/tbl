@@ -4,8 +4,8 @@
     [clojure.string :as str]
     [clojure.test :refer [deftest is testing]]
     [fooheads.tbl :as tbl
-     :refer [apply-template interpret relation->tbl
-             tabularize tbl tokenize transform]
+     :refer [interpret relation->tbl
+             tabularize tbl table->tree tokenize transform]
      :include-macros true]
     [tick.core :as t]))
 
@@ -96,7 +96,7 @@
     (is (= '[[:simple :collections]
              ---
              [10 [1 2 3]]
-             [ X [A B C]]]
+             [X [A B C]]]
            (->>
              (tokenize
                {}
@@ -105,7 +105,6 @@
                | 10      | 1 2 3        |
                | X       | A B C        |)
              (tabularize))))))
-
 
 
 (deftest interpret-test
@@ -521,70 +520,95 @@
                 :coercions {:value double}})))))
 
 
-(deftest apply-template-test
-  (let [template
-        (tbl
-          {:format :table}
-          | ---                    | ---                  |
-          | Customer               | :order/customer      |
-          | Date                   | :order/date          |
-          |                        |                      |
-          | Article                | Quantity             |
-          | *                      | *                    |
-          | :order-line/article-id | :order-line/quantity |)
-
-        order-data
-        (tbl
-          {:format :table}
-          | ---      | ---          | ---      |
-          | Customer | "John Doe"   |          |
-          | Date     | "2024-08-25" |          |
-          |          |              |          |
-          | Article  | Desc         | Quantity |
-          | 103      | "Bread"      | 1        |
-          | 234      | "Milk 1L"    | 4        |
-          | 666      | "BBQ Sauce"  | 1        |)]
-
-    (is
-      (=
-       [{}
-        {:order/customer "John Doe"}
-        {:order/date "2024-08-25"}
-        {}
-        {}
-        [{:order-line/article-id 103 :order-line/quantity "Bread"}]
-        [{:order-line/article-id 234 :order-line/quantity "Milk 1L"}]
-        [{:order-line/article-id 666 :order-line/quantity "BBQ Sauce"}]]
-
-       (apply-template template order-data)))))
-
-
 (deftest relation->tbl-test
   (testing "default"
     (is
       (=
-       (str/join
-         "\n"
-         ["(tbl"
-          "  | :name | :date | :value |"
-          "  | --- | --- | --- |"
-          "  | \"Jimi\" | \"2021-07-01\" | 10 |"
-          "  | \"Eddie\" | \"2021-07-02\" | 20 |)"])
-       (relation->tbl
-        [{:name "Jimi" :date "2021-07-01" :value 10} {:name "Eddie" :date "2021-07-02" :value 20}]))))
+        (str/join
+          "\n"
+          ["(tbl"
+           "  | :name | :date | :value |"
+           "  | --- | --- | --- |"
+           "  | \"Jimi\" | \"2021-07-01\" | 10 |"
+           "  | \"Eddie\" | \"2021-07-02\" | 20 |)"])
+        (relation->tbl
+          [{:name "Jimi" :date "2021-07-01" :value 10} {:name "Eddie" :date "2021-07-02" :value 20}]))))
 
   (testing "with key sort order"
     (is
       (=
-       (str/join
-         "\n"
-         ["(tbl"
-          "  | :date | :name | :value |"
-          "  | --- | --- | --- |"
-          "  | \"2021-07-01\" | \"Jimi\" | 10 |"
-          "  | \"2021-07-02\" | \"Eddie\" | 20 |)"])
+        (str/join
+          "\n"
+          ["(tbl"
+           "  | :date | :name | :value |"
+           "  | --- | --- | --- |"
+           "  | \"2021-07-01\" | \"Jimi\" | 10 |"
+           "  | \"2021-07-02\" | \"Eddie\" | 20 |)"])
 
-       (relation->tbl
-         [:date :name :value]
-         [{:name "Jimi" :date "2021-07-01" :value 10} {:name "Eddie" :date "2021-07-02" :value 20}])))))
+        (relation->tbl
+          [:date :name :value]
+          [{:name "Jimi" :date "2021-07-01" :value 10} {:name "Eddie" :date "2021-07-02" :value 20}])))))
+
+
+(deftest tbl->tree-test
+  (let [template
+        (tbl
+          {:format :table}
+          | ---          | ---                 | ---                  |
+          | Name         | :artist/name        |                      |
+          | Formed       | :artist/formed-year | :artist/formed-month |
+          |              |                     |                      |
+          | AlbumTitle   | ReleaseYear         |                      |
+          | :albums      |                     |                      |
+          | :album/title | :album/release-year |                      |
+          |              |                     | TrackName            |
+          |              |                     | :tracks              |
+          |              |                     | :track/name          |
+          |              |                     |                      |
+          |              |                     | PerformerName        |
+          |              |                     | :performers          |
+          |              |                     | :performer/name      |)
+
+        rows
+        (tbl
+          {:format :table}
+          | ---        | ---            | ---                    |
+          | Formed     | 1968           |                        |
+          | Name       | "Led Zeppelin" |                        |
+          |            |                |                        |
+          | AlbumTitle | ReleaseYear    |                        |
+          | "I"        | 1968           |                        |
+          |            |                | TrackName              |
+          |            |                | "Good Times Bad Times" |
+          |            |                | "Dazed and Confused"   |
+          |            |                |                        |
+          | "IV"       | 1971           |                        |
+          |            |                | TrackName              |
+          |            |                | "Black Dog"            |
+          |            |                | "Rock and Roll"        |
+          |            |                |                        |
+          |            |                | PerformerName          |
+          |            |                | "Robert Plant"         |
+          |            |                | "John Bonham"          |)]
+
+
+    (is (= {:artist/name "Led Zeppelin"
+            :artist/formed-year 1968
+            :artist/formed-month nil
+            :albums
+            [{:album/title "I"
+              :album/release-year 1968
+              :tracks
+              [{:track/name "Good Times Bad Times"}
+               {:track/name "Dazed and Confused"}]}
+             {:album/title "IV"
+              :album/release-year 1971
+              :tracks
+              [{:track/name "Black Dog"}
+               {:track/name "Rock and Roll"}]
+              :performers
+              [{:performer/name "Robert Plant"}
+               {:performer/name "John Bonham"}]}]}
+
+           (table->tree template rows)))))
 

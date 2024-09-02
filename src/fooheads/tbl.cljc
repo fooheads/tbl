@@ -5,7 +5,7 @@
   (:require
     [clojure.string :as str]
     [fooheads.stdlib :refer [cljs-env?
-                             const
+                             conjt
                              index-of
                              named?
                              partition-indexes
@@ -126,7 +126,8 @@
     {:data data}))
 
 
-(defn- extract-cells [separator-f row]
+(defn- extract-cells
+  [separator-f row]
   (->>
     row
     (partition-using #(separator-f (last %)))
@@ -393,8 +394,9 @@
        (transform opts#))))
 
 
-
-(defn- repeat-row? [row] (= '* (first row)))
+(defn- repeat-row?
+  [row]
+  (= '* (first row)))
 
 
 (defn apply-template
@@ -405,34 +407,34 @@
   A template that looks like this:
 
   `[()
-    [Customer :order/customer]
-    [Date :order/date]
-    [nil nil]
-    [Article Quantity]
-    [* *]
-    [:order-line/article-id :order-line/quantity]]`
+  [Customer :order/customer]
+  [Date :order/date]
+  [nil nil]
+  [Article Quantity]
+  [* *]
+  [:order-line/article-id :order-line/quantity]]`
 
   appled to this data:
 
   `[()
-    [Customer \"John Doe\" nil]
-    [Date \"2024-08-25\" nil]
-    [nil nil nil]
-    [Article Desc Quantity]
-    [103 \"Bread\" 1]
-    [234 \"Milk 1L\" 4
-    [666 \"BBQ Sauce\" 1]]
+  [Customer \"John Doe\" nil]
+  [Date \"2024-08-25\" nil]
+  [nil nil nil]
+  [Article Desc Quantity]
+  [103 \"Bread\" 1]
+  [234 \"Milk 1L\" 4
+  [666 \"BBQ Sauce\" 1]]
 
   will result in a this data structure:
 
   `[{}
-    {:order/customer \"John Doe\"}
-    {:order/date \"2024-08-25\"}
-    {}
-    {}
-    [{:order-line/article-id 103 :order-line/quantity \"Bread\"}]
-    [{:order-line/article-id 234 :order-line/quantity \"Milk 1L\"}]
-    [{:order-line/article-id 666 :order-line/quantity \"BBQ Sauce\"}]]
+  {:order/customer \"John Doe\"}
+  {:order/date \"2024-08-25\"}
+  {}
+  {}
+  [{:order-line/article-id 103 :order-line/quantity \"Bread\"}]
+  [{:order-line/article-id 234 :order-line/quantity \"Milk 1L\"}]
+  [{:order-line/article-id 666 :order-line/quantity \"BBQ Sauce\"}]]
 
   where each line in the collection part is wrapped in a vector in order
   to differentiate the top level values from the collection entries in further
@@ -442,14 +444,14 @@
   the `tbl` macro with the option `{:format :table}`. Example:
 
   `(tbl
-    {:format :table}
-    | ---                    | ---                  |
-    | Customer               | :order/customer      |
-    | Date                   | :order/date          |
-    |                        |                      |
-    | Article                | Quantity             |
-    | *                      | *                    |
-    | :order-line/article-id | :order-line/quantity |)`
+  {:format :table}
+  | ---                    | ---                  |
+  | Customer               | :order/customer      |
+  | Date                   | :order/date          |
+  |                        |                      |
+  | Article                | Quantity             |
+  | *                      | *                    |
+  | :order-line/article-id | :order-line/quantity |)`
   "
 
   [template data]
@@ -482,7 +484,8 @@
         result))))
 
 
-(defn make-comparator [order]
+(defn make-comparator
+  [order]
   (let [n (count order)
         order-map
         (if (vector? order)
@@ -518,4 +521,140 @@
            (map #(str "  | " (str/join " | " (map pr-str %)) " |"))
            (str/join "\n"))]
      (str "(tbl\n" s ")"))))
+
+
+(defn- template-key
+  [row]
+  (mapv #(if (symbol? %) % nil) row))
+
+
+(defn- match-template
+  [template-map row]
+  (let [template-key (template-key row)
+        template-value (get template-map template-key)]
+
+    (when (and (nil? template-value) (seq (remove nil? template-key)))
+      (throw (ex-info "No matching template" {:row row})))
+
+    template-value))
+
+
+(defn- extract-data
+  [template-value data-row]
+  (reduce
+    (fn [m [k path]]
+      (merge m {k (get data-row path)}))
+    {}
+    (:row-template template-value)))
+
+
+(defn- update-last
+  [xs f & args]
+  (apply update xs (dec (count xs)) f args))
+
+
+(defn- update-state
+  [state path data]
+  (if (empty? path)
+    (merge state data)
+    (assoc-in state path data)))
+
+
+(defn- single-row-template?
+  [row]
+  (and (seq (filter symbol? row))
+       (seq (filter keyword? row))))
+
+
+(defn- multi-row-template?
+  [row]
+  (and (seq (filter symbol? row))
+       (not (seq (filter keyword? row)))))
+
+
+(defn- row-template
+  [row]
+  (->>
+    row
+    (map-indexed
+      (fn [index x]
+        (if (keyword? x)
+          [x index]
+          nil)))
+    (remove nil?)
+    (into {})))
+
+
+(defn- parse-template
+  [template]
+  (loop [state {}
+         [row & rows] template]
+
+    (cond
+      (nil? row)
+      state
+
+      (blank-line? row)
+      (recur state rows)
+
+      (single-row-template? row)
+      (let [template-value {:row-template (row-template row)}
+            state (assoc state (template-key row) template-value)]
+
+        (recur state rows))
+
+      (multi-row-template? row)
+      (let [[coll-attr-names attr-names & rows] rows
+            attr-name  (->> coll-attr-names (filter keyword?) first)
+            template-value {:attr-name attr-name
+                            :row-template (row-template attr-names)}
+            state (assoc state (template-key row) template-value)]
+
+        (recur state rows))
+
+      :else
+      (throw (ex-info "Not a template row" {:row row})))))
+
+
+(defn table->tree
+  "Generate a tree from a template and a data table (vector of vectors)."
+  [template rows]
+  (let [template-map (parse-template template)]
+    (loop [state {}
+           [row & rows] rows
+           template-values []
+           path []]
+
+      (cond
+        (nil? row)
+        state
+
+        :else
+        (let [template-value (match-template template-map row)]
+          (cond
+
+            (blank-line? row)
+            (recur state rows
+                   (vec (butlast template-values))
+                   (vec (butlast (butlast path))))
+
+            (nil? template-value)
+            (let [template-value (last template-values)
+                  data (extract-data template-value row)
+                  [state path]
+                  (if (:attr-name template-value)
+                    (let [path (update-last path inc)]
+                      [(update-state state path data) path])
+                    [(update-state state path data) path])]
+              (recur state rows template-values path))
+
+            :else
+            (if (:attr-name template-value)
+              (let [template-values (conjt template-values template-value)
+                    path (into path [(:attr-name template-value) -1])
+                    state (assoc-in state (butlast path) [])]
+                (recur state rows template-values path))
+              (let [data (extract-data template-value row)
+                    state (update-state state path data)]
+                (recur state rows template-values path)))))))))
 
