@@ -5,7 +5,8 @@
     [clojure.test :refer [deftest is testing]]
     [fooheads.tbl :as tbl
      :refer [interpret relation->tbl
-             tabularize tbl table->tree tokenize transform]
+             tabularize tbl table->tree template->tree-mapping
+             tokenize transform]
      :include-macros true]
     [tick.core :as t]))
 
@@ -550,26 +551,48 @@
           [{:name "Jimi" :date "2021-07-01" :value 10} {:name "Eddie" :date "2021-07-02" :value 20}])))))
 
 
-(deftest tbl->tree-test
-  (let [template
-        (tbl
-          {:format :table}
-          | ---          | ---                 | ---                  |
-          | Name         | :artist/name        |                      |
-          | Formed       | :artist/formed-year | :artist/formed-month |
-          |              |                     |                      |
-          | AlbumTitle   | ReleaseYear         |                      |
-          | :albums      |                     |                      |
-          | :album/title | :album/release-year |                      |
-          |              |                     | TrackName            |
-          |              |                     | :tracks              |
-          |              |                     | :track/name          |
-          |              |                     |                      |
-          |              |                     | PerformerName        |
-          |              |                     | :performers          |
-          |              |                     | :performer/name      |)
+(def template
+  (tbl
+    {:format :table}
+    | ---          | ---                 | ---                  |
+    | Name         | :artist/name        |                      |
+    | Formed       | :artist/formed-year | :artist/formed-month |
+    |              |                     |                      |
+    | AlbumTitle   | ReleaseYear         |                      |
+    | :albums      |                     |                      |
+    | :album/title | :album/release-year |                      |
+    |              |                     | TrackName            |
+    |              |                     | :tracks              |
+    |              |                     | :track/name          |
+    |              |                     |                      |
+    |              |                     | PerformerName        |
+    |              |                     | :performers          |
+    |              |                     | :performer/name      |))
 
-        rows
+
+(deftest tbl->tree-test
+  (is
+    (=
+      {:artist/name "Led Zeppelin"
+       :artist/formed-year 1968
+       :artist/formed-month nil
+       :albums
+       [{:album/title "I"
+         :album/release-year 1968
+         :tracks
+         [{:track/name "Good Times Bad Times"}
+          {:track/name "Dazed and Confused"}]}
+        {:album/title "IV"
+         :album/release-year 1971
+         :tracks
+         [{:track/name "Black Dog"}
+          {:track/name "Rock and Roll"}]
+         :performers
+         [{:performer/name "Robert Plant"}
+          {:performer/name "John Bonham"}]}]}
+
+      (table->tree
+        template
         (tbl
           {:format :table}
           | ---        | ---            | ---                    |
@@ -589,26 +612,20 @@
           |            |                |                        |
           |            |                | PerformerName          |
           |            |                | "Robert Plant"         |
-          |            |                | "John Bonham"          |)]
+          |            |                | "John Bonham"          |)))))
 
 
-    (is (= {:artist/name "Led Zeppelin"
-            :artist/formed-year 1968
-            :artist/formed-month nil
-            :albums
-            [{:album/title "I"
-              :album/release-year 1968
-              :tracks
-              [{:track/name "Good Times Bad Times"}
-               {:track/name "Dazed and Confused"}]}
-             {:album/title "IV"
-              :album/release-year 1971
-              :tracks
-              [{:track/name "Black Dog"}
-               {:track/name "Rock and Roll"}]
-              :performers
-              [{:performer/name "Robert Plant"}
-               {:performer/name "John Bonham"}]}]}
+(deftest template->tree-mapping-test
+  (is (= {:artist/formed-month :artist/formed-month
+          :artist/formed-year :artist/formed-year
+          :artist/name :artist/name
+          :albums
+          [{:album/title :album/title
+            :album/release-year :album/release-year
+            :tracks
+            [{:track/name :track/name}]
+            :performers
+            [{:performer/name :performer/name}]}]}
 
-           (table->tree template rows)))))
+         (template->tree-mapping template))))
 
