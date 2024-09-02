@@ -658,3 +658,37 @@
                     state (update-state state path data)]
                 (recur state rows template-values path)))))))))
 
+
+(defn template->tree-mapping
+  "Converts a template into a tree-mapping."
+  [template]
+
+
+  (loop [state {}
+         [row & rows] template
+         path []]
+
+    (cond
+      (nil? row)
+      state
+
+
+      (blank-line? row)
+      (recur state rows (vec (butlast (butlast path))))
+
+      (single-row-template? row)
+      (let [ks (filter keyword? row)
+            mapping (into {} (zipmap ks ks))
+            state (merge state mapping)]
+        (recur state rows path))
+
+      (multi-row-template? row)
+      (let [[coll-attr-names attr-names & rows] rows
+            attr-name  (->> coll-attr-names (filter keyword?) first)
+            ks (filter keyword? attr-names)
+            mapping (into {} (zipmap ks ks))
+            state (assoc-in state (into path [attr-name]) [])
+            path (into path [attr-name 0])
+            state (assoc-in state path mapping)]
+        (recur state rows path)))))
+
