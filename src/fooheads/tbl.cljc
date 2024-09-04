@@ -659,36 +659,50 @@
                 (recur state rows template-values path)))))))))
 
 
+(defn- pk-mapping
+  [ks pk-map]
+  (->>
+    ks
+    (map (comp keyword namespace))
+    distinct
+    (keep (fn [relvar-name]
+            (when-let [pk (pk-map relvar-name)]
+              [(symbol (str "?" (namespace pk)) (name pk)) pk])))
+    (into {})))
+
+
 (defn template->tree-mapping
   "Converts a template into a tree-mapping."
-  [template]
+  ([template]
+   (template->tree-mapping template {}))
+  ([template pk-map]
 
+   (loop [state {}
+          [row & rows] template
+          path []]
 
-  (loop [state {}
-         [row & rows] template
-         path []]
+     (cond
+       (nil? row)
+       state
 
-    (cond
-      (nil? row)
-      state
+       (blank-line? row)
+       (recur state rows (vec (butlast (butlast path))))
 
+       (single-row-template? row)
+       (let [ks (filter keyword? row)
+             mapping (into {} (zipmap ks ks))
+             mapping (merge (pk-mapping ks pk-map) mapping)
+             state (merge state mapping)]
+         (recur state rows path))
 
-      (blank-line? row)
-      (recur state rows (vec (butlast (butlast path))))
-
-      (single-row-template? row)
-      (let [ks (filter keyword? row)
-            mapping (into {} (zipmap ks ks))
-            state (merge state mapping)]
-        (recur state rows path))
-
-      (multi-row-template? row)
-      (let [[coll-attr-names attr-names & rows] rows
-            attr-name  (->> coll-attr-names (filter keyword?) first)
-            ks (filter keyword? attr-names)
-            mapping (into {} (zipmap ks ks))
-            state (assoc-in state (into path [attr-name]) [])
-            path (into path [attr-name 0])
-            state (assoc-in state path mapping)]
-        (recur state rows path)))))
+       (multi-row-template? row)
+       (let [[coll-attr-names attr-names & rows] rows
+             attr-name  (->> coll-attr-names (filter keyword?) first)
+             ks (filter keyword? attr-names)
+             mapping (into {} (zipmap ks ks))
+             mapping (merge (pk-mapping ks pk-map) mapping)
+             state (assoc-in state (into path [attr-name]) [])
+             path (into path [attr-name 0])
+             state (assoc-in state path mapping)]
+         (recur state rows path))))))
 

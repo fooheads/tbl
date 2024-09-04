@@ -616,16 +616,39 @@
 
 
 (deftest template->tree-mapping-test
-  (is (= {:artist/formed-month :artist/formed-month
-          :artist/formed-year :artist/formed-year
-          :artist/name :artist/name
-          :albums
-          [{:album/title :album/title
-            :album/release-year :album/release-year
-            :tracks
-            [{:track/name :track/name}]
-            :performers
-            [{:performer/name :performer/name}]}]}
+  (testing "vanilla"
+    (is (= {:artist/formed-month :artist/formed-month
+            :artist/formed-year :artist/formed-year
+            :artist/name :artist/name
+            :albums
+            [{:album/title :album/title
+              :album/release-year :album/release-year
+              :tracks
+              [{:track/name :track/name}]
+              :performers
+              [{:performer/name :performer/name}]}]}
 
-         (template->tree-mapping template))))
+           (template->tree-mapping template))))
+
+  (testing "keys"
+    (let [pk-map {:artist :artist/artist-id
+                  :album :album/album-id
+                  :track :track/track-id
+                  :performer :performer/performer-id}]
+      (is (= '{?artist/artist-id :artist/artist-id
+               :artist/formed-month :artist/formed-month
+               :artist/formed-year :artist/formed-year
+               :artist/name :artist/name
+               :albums
+               [{?album/album-id :album/album-id
+                 :album/title :album/title
+                 :album/release-year :album/release-year
+                 :tracks
+                 [{?track/track-id :track/track-id
+                   :track/name :track/name}]
+                 :performers
+                 [{?performer/performer-id :performer/performer-id
+                   :performer/name :performer/name}]}]}
+
+             (template->tree-mapping template pk-map))))))
 
