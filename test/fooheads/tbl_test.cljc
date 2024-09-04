@@ -570,7 +570,7 @@
     |              |                     | :performer/name      |))
 
 
-(deftest tbl->tree-test
+(deftest table->tree-test
   (is
     (=
       {:artist/name "Led Zeppelin"
