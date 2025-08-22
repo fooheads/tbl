@@ -1,7 +1,6 @@
 {:deps
- {
-  cljsjs/js-joda-timezone {:mvn/version "2.2.0-0"}
-  com.fooheads/stdlib {:mvn/version "0.3.3"}
+ {cljsjs/js-joda-timezone {:mvn/version "2.2.0-0"}
+  com.fooheads/stdlib {:mvn/version "0.4.7"}
   henryw374/js-joda {:mvn/version "3.2.0-0"}
   henryw374/js-joda-locale-en-us {:mvn/version "1.0.0-1"}
   org.clojure/clojurescript {:mvn/version "1.11.54"}}
@@ -30,6 +29,6 @@
    :main-opts ["-m" "cljs-test-runner.main"]}
 
   :build
-  {:deps {com.fooheads/build-clj {:mvn/version "1.0.0"}}
+  {:deps {com.fooheads/build-clj {:mvn/version "1.1.1"}}
    :ns-default fooheads.build}}}
 

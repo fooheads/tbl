@@ -182,6 +182,34 @@
      data)))
 
 
+(defn- quote-symbols
+  [row-or-table]
+  (let [quote-symbol-f #(if (symbol? %) `(quote ~%) %)]
+    (cond
+      (and (sequential? row-or-table) (every? sequential? row-or-table))
+      (mapv #(mapv quote-symbol-f %) row-or-table)
+
+      (sequential? row-or-table)
+      (mapv quote-symbol-f row-or-table)
+
+      :else
+      (throw (ex-info "row-or-table must be row or a table"
+                      {:row-or-table row-or-table})))))
+
+
+(defn- unquote-symbols
+  [table]
+  (let [unquote-symbol
+        (fn [x]
+          (let [res (if (and (seq? x)
+                             (= 'quote (first x))
+                             (= 2 (count x)))
+                      (second x)
+                      x)]
+            res))]
+    (mapv #(mapv unquote-symbol %) table)))
+
+
 (defn interpret
   "Interprets the tabular data into a map with :col-headers, :row-headers, :data
   and :transformations.
@@ -247,6 +275,7 @@
          ;; now that we have used the divider line, remove it
          ;; assumes that all col-headers comes before the divider-line
          table (remove divider-line? table)
+         table (quote-symbols table)
 
          [col-headers coercions data]
          (partition-indexes [col-header-idxs coercion-idxs] table)
@@ -378,20 +407,26 @@
     [{} tokens]))
 
 
+(defn- tbl-fn
+  [elements]
+  (let [[table-opts tokens] (-extract-opts elements)
+        default-opts {:format :maps}
+        opts (merge default-opts table-opts)
+        elements (->>
+                   tokens
+                   (tabularize opts)
+                   (interpret opts))
+        elements (if (true? (:unquote opts))
+                   (update elements :data unquote-symbols)
+                   elements)]
+    [opts elements]))
+
+
 (defmacro tbl
   "Macro for common tables"
   [& elements]
-  `(let [elements# (tokenize {:resolve false} ~@elements)
-         [table-opts# tokens#] (-extract-opts elements#)
-
-         default-opts# {:format :maps}
-         opts# (merge default-opts# table-opts#)]
-
-     (->>
-       tokens#
-       (tabularize opts#)
-       (interpret opts#)
-       (transform opts#))))
+  (let [[opts elements] (tbl-fn elements)]
+    `(transform ~opts ~elements)))
 
 
 (defn- repeat-row?
@@ -705,4 +740,3 @@
              path (into path [attr-name 0])
              state (assoc-in state path mapping)]
          (recur state rows path))))))
-

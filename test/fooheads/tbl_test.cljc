@@ -11,6 +11,12 @@
     [tick.core :as t]))
 
 
+(def q #'fooheads.tbl/quote-symbols)
+
+(def group-id "the-group")
+(def user-name "the-user")
+
+
 (deftest tokenize-test
   (testing "not resolving symbols"
     (is (= '[| :date        | :value  | :value2 |
@@ -126,9 +132,9 @@
 
   (testing "col-headers"
     (testing "1 (default)"
-      (is (= {:col-headers '[A B]
-              :data '[[x y]
-                      [x nil]]}
+      (is (= {:col-headers (q '[A B])
+              :data (q '[[x y]
+                         [x nil]])}
 
              (interpret
                (tabularize
@@ -140,8 +146,8 @@
                    | x   |     |))))))
 
     (testing "none"
-      (is (= {:data '[[x y]
-                      [x nil]]}
+      (is (= {:data (q '[[x y]
+                         [x nil]])}
 
              (interpret
                {:col-header-idxs []}
@@ -153,9 +159,9 @@
                    | x       |         |))))))
 
     (testing "many"
-      (is (= {:col-headers '[[A Mon 100] [B Mon 50]]
-              :data '[[x y]
-                      [x nil]]}
+      (is (= {:col-headers (q '[[A Mon 100] [B Mon 50]])
+              :data (q '[[x y]
+                         [x nil]])}
 
              (interpret
                {:col-header-idxs (range 3)}
@@ -191,8 +197,8 @@
   (testing "row-headers"
 
     (testing "none (default)"
-      (is (= {:data '[[x y]
-                      [x nil]]}
+      (is (= {:data (q '[[x y]
+                         [x nil]])}
 
              (interpret
                {:col-header-idxs []}
@@ -212,9 +218,9 @@
 
 
     (testing "one"
-      (is (= {:row-headers '[A B]
-              :data '[[x y]
-                      [x nil]]}
+      (is (= {:row-headers (q '[A B])
+              :data (q '[[x y]
+                         [x nil]])}
 
              (->>
                (tokenize
@@ -228,9 +234,9 @@
 
 
     (testing "many"
-      (is (= {:row-headers '[[A Mon 100] [B Mon 50]]
-              :data '[[x y]
-                      [x nil]]}
+      (is (= {:row-headers (q '[[A Mon 100] [B Mon 50]])
+              :data (q '[[x y]
+                         [x nil]])}
 
              (->>
                (tokenize
@@ -244,10 +250,10 @@
 
 
   (testing "col-headers and row-headers"
-    (is (= {:col-headers '[[A Mon 100] [B Mon 50]]
-            :row-headers '[[a 1] [b 2]]
-            :data '[[x y]
-                    [x nil]]}
+    (is (= {:col-headers (q '[[A Mon 100] [B Mon 50]])
+            :row-headers (q '[[a 1] [b 2]])
+            :data (q '[[x y]
+                       [x nil]])}
 
            (->>
              (tokenize
@@ -263,9 +269,9 @@
                          :row-header-idxs [0 1]})))))
 
   (testing "without-divider"
-    (is (= {:row-headers '[[A Mon 100] [B Mon 50]]
-            :data '[[x y]
-                    [x nil]]}
+    (is (= {:row-headers (q '[[A Mon 100] [B Mon 50]])
+            :data (q '[[x y]
+                       [x nil]])}
 
            (->>
              (tokenize
@@ -425,6 +431,21 @@
              | ---------- | ---------- |
              | 'group-id  | :string    |
              | 'user-name | :string    |))))
+
+
+  (testing "Symbols can be unquoted and returned as-is, and interpreted by
+            clojure. Mostly useful to refer to functions."
+    (is (= [{:attr-name "the-group"
+             :attr-type :string}
+            {:attr-name "the-user"
+             :attr-type :string}]
+
+           (tbl
+             | :attr-name | :attr-type |
+             | ---------- | ---------- |
+             | 'group-id  | :string    |
+             | user-name  | :string    |
+             {:unquote true}))))
 
 
   (testing "last argument can be opts"
